@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1677ff">
+<title>回填价格计算器</title>
+<style>
+  :root {
+    --primary: #1677ff;
+    --green: #52c41a;
+    --orange: #fa8c16;
+    --gold: #fadb14;
+    --red: #ff4d4f;
+    --text: #1f2733;
+    --text-sub: #5b6472;
+    --text-weak: #9aa4b2;
+    --line: #eef1f6;
+    --bg: #f4f6fb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background:
+      radial-gradient(1000px 420px at 50% -180px, rgba(22,119,255,0.10), transparent 70%),
+      var(--bg);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { width: 100%; max-width: 500px; padding: 10px 12px; }
+
+  /* ===== 顶栏（一行） ===== */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 2px 12px;
+  }
+  .topbar .logo {
+    width: 40px; height: 40px; flex-shrink: 0;
+    background: linear-gradient(135deg, #4f8cff, #6a5cff);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(22,119,255,0.30);
+  }
+  .topbar .tt { flex: 1; min-width: 0; }
+  .topbar h1 { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .topbar .sub { font-size: 11px; color: var(--text-weak); margin-top: 1px; }
+  .badges { display: flex; gap: 6px; flex-shrink: 0; }
+  .badge {
+    font-size: 11px; font-weight: 600; color: var(--primary);
+    background: #e8f1ff; padding: 4px 10px; border-radius: 14px;
+    white-space: nowrap;
+  }
+
+  /* ===== 输入区（2×2 网格） ===== */
+  .card {
+    background: #fff; border-radius: 16px;
+    padding: 12px; margin-bottom: 10px;
+    box-shadow: 0 3px 14px rgba(31,39,51,0.05);
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cell label {
+    display: block; font-size: 12px; color: var(--text-sub);
+    margin-bottom: 5px; font-weight: 600;
+  }
+  .field {
+    display: flex; align-items: center;
+    height: 44px; background: #f7f9fc;
+    border: 1.5px solid transparent; border-radius: 11px;
+    padding: 0 12px; transition: all 0.15s;
+  }
+  .field:focus-within {
+    background: #fff; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(22,119,255,0.10);
+  }
+  .field input, .field select {
+    flex: 1; width: 100%; height: 100%; min-width: 0;
+    border: none; background: transparent;
+    font-size: 16px; color: var(--text);
+    outline: none; -webkit-appearance: none; appearance: none;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%239aa4b2' stroke-width='2.4'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0 center;
+  }
+  .field .unit { font-size: 12px; color: var(--text-weak); flex-shrink: 0; }
+  .rate-tag {
+    grid-column: 1 / -1;
+    font-size: 12px; color: var(--text-weak);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .rate-tag b {
+    font-size: 11px; font-weight: 700; color: var(--primary);
+    background: #e8f1ff; padding: 2px 8px; border-radius: 6px;
+  }
+
+  /* ===== 回填价 hero ===== */
+  .hero {
+    position: relative;
+    background: linear-gradient(135deg, #1677ff 0%, #6a5cff 100%);
+    border-radius: 16px; padding: 14px 14px 13px;
+    text-align: center; color: #fff; margin-bottom: 10px;
+    box-shadow: 0 8px 22px rgba(22,119,255,0.32); overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; top: -40px; right: -30px;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: rgba(255,255,255,0.10);
+  }
+  .hero .hl { font-size: 12px; opacity: 0.88; position: relative; }
+  .hero .hv {
+    font-size: 42px; font-weight: 800; line-height: 1.15; position: relative;
+    letter-spacing: 1px; margin: 2px 0;
+  }
+  .hero .hv .cur { font-size: 20px; font-weight: 700; margin-right: 1px; }
+  .hero .hs {
+    font-size: 11px; opacity: 0.82; position: relative;
+    display: flex; justify-content: center; gap: 14px;
+  }
+  .hero .copy-btn {
+    position: relative; margin-top: 10px;
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.30);
+    color: #fff; border-radius: 20px;
+    padding: 8px 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .hero .copy-btn:active { background: rgba(255,255,255,0.28); }
+
+  /* ===== 毛利（进度条） ===== */
+  .profit { padding: 14px 14px; }
+  .profit-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .profit-head .lbl { font-size: 13px; color: var(--text-sub); font-weight: 600; }
+  .profit-head .val { font-size: 24px; font-weight: 800; color: var(--text); }
+  .bar {
+    height: 10px; background: #eef1f6; border-radius: 5px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; width: 0%; border-radius: 5px;
+    background: #52c41a; transition: width 0.5s, background 0.3s;
+  }
+  .profit-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px;
+  }
+  .profit-foot .gp { font-size: 13px; color: var(--text-sub); }
+  .profit-foot .gp b { font-size: 15px; color: var(--text); }
+  .verdict {
+    font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 12px;
+    display: none;
+  }
+  .verdict.show { display: inline-block; }
+  .verdict.good { background: #f0f9eb; color: #389e0d; }
+  .verdict.mid  { background: #fff7e6; color: #d46b08; }
+  .verdict.low  { background: #fffbe6; color: #ad8b00; }
+  .verdict.bad  { background: #fff1f0; color: #cf1322; }
+
+  /* ===== 按钮 ===== */
+  .actions { display: flex; gap: 10px; margin-bottom: 10px; }
+  .btn {
+    flex: 1; height: 44px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    transition: all 0.15s;
+  }
+  .btn.ghost { background: #fff; color: var(--text-sub); border: 1.5px solid #e3e8f0; }
+  .btn.ghost:active { background: #f5f7fa; }
+  .btn.primary {
+    background: linear-gradient(135deg, #4f8cff, #1677ff);
+    color: #fff; box-shadow: 0 5px 14px rgba(22,119,255,0.26);
+  }
+  .btn.primary:active { opacity: 0.88; }
+
+  /* ===== 折叠区 ===== */
+  .collapse-head {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; font-size: 13px; color: var(--text-sub); font-weight: 600;
+    padding: 2px 0;
+  }
+  .collapse-head .summary { font-size: 12px; color: var(--text-weak); font-weight: 400; }
+  .collapse-head .arrow { transition: transform 0.25s; color: var(--text-weak); }
+  .collapse-head.open .arrow { transform: rotate(180deg); }
+  .collapse-body { display: none; margin-top: 10px; }
+  .collapse-body.show { display: block; }
+
+  .item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; font-size: 13px;
+  }
+  .item + .item { border-top: 1px dashed var(--line); }
+  .item .lbl { color: var(--text-sub); }
+  .item .val { font-weight: 700; color: var(--text); font-size: 14px; }
+  .item .val.orange { color: var(--orange); }
+  .svc-input {
+    width: 120px; height: 34px;
+    border: 1.5px solid #e3e8f0; border-radius: 8px;
+    padding: 0 10px; font-size: 14px; text-align: right;
+    font-weight: 700; color: var(--text); outline: none; background: #f7f9fc;
+  }
+  .svc-input:focus { border-color: var(--primary); background: #fff; }
+
+  .rate-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rate-table th, .rate-table td { padding: 7px 6px; text-align: center; border-bottom: 1px solid #f2f5fa; }
+  .rate-table th { color: var(--text-weak); font-weight: 600; background: #fafbfd; }
+  .rate-table td { color: var(--text); }
+  .rate-table tr.active td { background: #e8f1ff; font-weight: 700; color: var(--primary); }
+  .rate-table tr.active td:first-child { border-radius: 8px 0 0 8px; }
+  .rate-table tr.active td:last-child { border-radius: 0 8px 8px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <div class="logo">🧮</div>
+    <div class="tt">
+      <h1>回填价格计算器</h1>
+      <div class="sub">回填价 = 销售价 − 服务费 − 销售价×1%</div>
+    </div>
+    <div class="badges">
+      <span class="badge" id="badgeBrand">非苹果</span>
+      <span class="badge" id="badgeSource">默认</span>
+    </div>
+  </div>
+
+  <!-- 输入（2×2） -->
+  <div class="card">
+    <div class="grid">
+      <div class="cell">
+        <label>品牌</label>
+        <div class="field">
+          <select id="brand" onchange="onBrand()">
+            <option value="other">非苹果</option>
+            <option value="apple">苹果</option>
+          </select>
+        </div>
+      </div>
+      <div class="cell">
+        <label>来源</label>
+        <div class="field">
+          <select id="source" onchange="calc()">
+            <option value="default">默认</option>
+            <option value="refurb">资源机/官翻</option>
+          </select>
+        </div>
+      </div>
+      <div class="cell">
+        <label>销售价（面价）</label>
+        <div class="field">
+          <input type="text" inputmode="decimal" id="price" placeholder="面价" autocomplete="off" oninput="calc()">
+          <span class="unit">元</span>
+        </div>
+      </div>
+      <div class="cell">
+        <label>成本价</label>
+        <div class="field">
+          <input type="text" inputmode="decimal" id="cost" placeholder="成本" autocomplete="off" oninput="calc()">
+          <span class="unit">元</span>
+        </div>
+      </div>
+      <div class="rate-tag" id="rateInfo"></div>
+    </div>
+  </div>
+
+  <!-- 回填价 -->
+  <div class="hero">
+    <div class="hl">参考回填价格</div>
+    <div class="hv"><span class="cur">¥</span><span id="refBackfill">0.00</span></div>
+    <div class="hs">
+      <span>服务费 <b id="svcBrief">-</b></span>
+      <span>电商税 <b id="taxBrief">-</b></span>
+    </div>
+    <button class="copy-btn" onclick="copyBackfill()">📋 复制回填价</button>
+  </div>
+
+  <!-- 毛利 -->
+  <div class="card profit">
+    <div class="profit-head">
+      <span class="lbl">毛利率</span>
+      <span class="val" id="grossMargin">0.00%</span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    <div class="profit-foot">
+      <span class="gp">毛利润 <b id="grossProfit">¥ 0.00</b></span>
+      <span class="verdict" id="verdict"></span>
+    </div>
+  </div>
+
+  <!-- 按钮 -->
+  <div class="actions">
+    <button class="btn ghost" onclick="clearAll()">🗑️ 清空</button>
+    <button class="btn primary" onclick="copyAll()">📋 复制全部</button>
+  </div>
+
+  <!-- 费用明细（折叠） -->
+  <div class="card">
+    <div class="collapse-head" id="feeHead" onclick="toggleFee()">
+      <span>🧾 费用明细</span>
+      <span class="summary" id="feeSummary">-</span>
+      <span class="arrow">▾</span>
+    </div>
+    <div class="collapse-body" id="feeBody">
+      <div class="item">
+        <span class="lbl">匹配服务费率</span>
+        <span class="val" id="rateDisplay">-</span>
+      </div>
+      <div class="item">
+        <span class="lbl">服务费（可手改）</span>
+        <input type="text" inputmode="decimal" id="serviceFeeInput" class="svc-input" oninput="recalcByServiceFee()">
+      </div>
+      <div class="item" id="capRow" style="display:none;">
+        <span class="lbl">费用上限</span>
+        <span class="val orange" id="capInfo">-</span>
+      </div>
+      <div class="item">
+        <span class="lbl">电商税（1%）</span>
+        <span class="val" id="tax">¥ 0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 费率表（折叠） -->
+  <div class="card">
+    <div class="collapse-head" id="tableHead" onclick="toggleTable()">
+      <span>📊 阶梯费率表</span>
+      <span class="arrow">▾</span>
+    </div>
+    <div class="collapse-body" id="tableBody">
+      <table class="rate-table" id="rateTable">
+        <thead><tr><th>区间（元）</th><th>费率</th><th>封顶</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TABLE = {
+  apple: {
+    default: [
+      {min:0,max:1000,r:0.21,cap:1/0},{min:1000,max:2000,r:0.12,cap:1/0},
+      {min:2000,max:2500,r:0.11,cap:1/0},{min:2500,max:3000,r:0.10,cap:1/0},
+      {min:3000,max:4000,r:0.09,cap:1/0},{min:4000,max:6500,r:0.07,cap:1/0},
+      {min:6500,max:1/0,r:0.06,cap:450}
+    ],
+    refurb: [{min:0,max:1/0,r:0.036,cap:1/0}]
+  },
+  other: {
+    default: [
+      {min:0,max:500,r:0.20,cap:1/0},{min:500,max:1000,r:0.15,cap:1/0},
+      {min:1000,max:1500,r:0.13,cap:1/0},{min:1500,max:2000,r:0.11,cap:1/0},
+      {min:2000,max:2500,r:0.10,cap:1/0},{min:2500,max:3000,r:0.09,cap:1/0},
+      {min:3000,max:5000,r:0.07,cap:1/0},{min:5000,max:1/0,r:0.06,cap:550}
+    ],
+    refurb: [{min:0,max:1/0,r:0.036,cap:1/0}]
+  }
+};
+
+const STORE_KEY = 'backfill_calc_v1';
+
+function $(id){ return document.getElementById(id); }
+function fmt(v,d){ return Number(v).toFixed(d); }
+function capText(cap){ return cap === Infinity ? '不封顶' : ('¥' + fmt(cap,0)); }
+
+/* 本地保存 / 读取 */
+function save(){
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      brand: $('brand').value, source: $('source').value,
+      price: $('price').value, cost: $('cost').value, svc: $('serviceFeeInput').value
+    }));
+  } catch(e){}
+}
+function restore(){
+  try {
+    const s = localStorage.getItem(STORE_KEY);
+    if(!s) return;
+    const d = JSON.parse(s);
+    if(d.brand) $('brand').value = d.brand;
+    if(d.source) $('source').value = d.source;
+    if(d.price) $('price').value = d.price;
+    if(d.cost) $('cost').value = d.cost;
+    if(d.svc) $('serviceFeeInput').value = d.svc;
+  } catch(e){}
+}
+function applyUrlParams(){
+  try {
+    const q = new URLSearchParams(location.search);
+    if(q.has('brand')) $('brand').value = q.get('brand');
+    if(q.has('source')) $('source').value = q.get('source');
+    if(q.has('price')) $('price').value = q.get('price');
+    if(q.has('cost')) $('cost').value = q.get('cost');
+    if(q.has('svc')) $('serviceFeeInput').value = q.get('svc');
+  } catch(e){}
+}
+
+function updateBadges(){
+  const bm = { other:'非苹果', apple:'苹果' };
+  const sm = { default:'默认', refurb:'资源机/官翻' };
+  $('badgeBrand').textContent = bm[$('brand').value];
+  $('badgeSource').textContent = sm[$('source').value];
+}
+
+function onBrand(){ updateBadges(); calc(); }
+
+function calc(){
+  const brand = $('brand').value;
+  const source = $('source').value;
+  const price = parseFloat($('price').value);
+
+  save();
+  updateBadges();
+  renderRateTable(brand, source, price);
+
+  if(isNaN(price) || price < 0){
+    $('rateDisplay').textContent = '-';
+    $('serviceFeeInput').value = '';
+    $('tax').textContent = '¥ 0.00';
+    $('svcBrief').textContent = '-';
+    $('taxBrief').textContent = '-';
+    $('feeSummary').textContent = '-';
+    $('refBackfill').textContent = '0.00';
+    $('rateInfo').innerHTML = '';
+    $('capRow').style.display = 'none';
+    setProfit(null, null);
+    return;
+  }
+
+  const tiers = TABLE[brand][source];
+  let tier = tiers[0];
+  for(const t of tiers){ if(price >= t.min && price < t.max){ tier = t; break; } }
+  const rate = tier.r;
+
+  let svc = price * rate, capped = false;
+  if(svc > tier.cap){ svc = tier.cap; capped = true; }
+
+  const tax = price * 0.01;
+  const range = (tier.min===0?'0':tier.min) + '~' + (tier.max===Infinity?'+∞':tier.max);
+
+  $('rateDisplay').textContent = fmt(rate*100, 2) + '%';
+  $('serviceFeeInput').value = fmt(svc, 2);
+  $('tax').textContent = '¥ ' + fmt(tax, 2);
+  $('svcBrief').textContent = '¥' + fmt(svc, 0);
+  $('taxBrief').textContent = '¥' + fmt(tax, 0);
+  $('feeSummary').textContent = fmt(rate*100,2) + '% · ¥' + fmt(svc,0) + ' · 税¥' + fmt(tax,0);
+  $('rateInfo').innerHTML = '<b>' + fmt(rate*100,2) + '%</b> 命中区间 ' + range + ' 元';
+
+  if(capped){
+    $('capRow').style.display = 'flex';
+    $('capInfo').textContent = '已触发上限 ¥' + fmt(tier.cap, 2);
+  } else {
+    $('capRow').style.display = 'none';
+  }
+
+  recalcByServiceFee();
+}
+
+function recalcByServiceFee(){
+  const price = parseFloat($('price').value);
+  const cost = parseFloat($('cost').value);
+  const svc = parseFloat($('serviceFeeInput').value);
+
+  save();
+
+  if(isNaN(price) || price < 0){ return; }
+  if(isNaN(svc) || svc < 0){
+    $('refBackfill').textContent = '0.00';
+    setProfit(null, null);
+    return;
+  }
+
+  const tax = price * 0.01;
+  const backfill = price - svc - tax;
+  $('refBackfill').textContent = fmt(backfill, 2);
+
+  if(isNaN(cost) || cost < 0 || backfill <= 0){
+    setProfit(null, null);
+    return;
+  }
+  const grossProfit = backfill - cost;
+  const grossMargin = (grossProfit / backfill) * 100;
+  setProfit(grossProfit, grossMargin);
+}
+
+function setProfit(profit, margin){
+  const bar = $('barFill');
+
+  if(profit === null || margin === null){
+    $('grossProfit').textContent = '¥ 0.00';
+    $('grossMargin').textContent = '0.00%';
+    bar.style.width = '0%';
+    bar.style.background = '#52c41a';
+    $('verdict').className = 'verdict';
+    $('verdict').textContent = '';
+    return;
+  }
+
+  $('grossProfit').textContent = '¥ ' + fmt(profit, 2);
+  $('grossMargin').textContent = fmt(margin, 2) + '%';
+
+  const pct = Math.max(0, Math.min(100, margin));
+  bar.style.width = pct + '%';
+
+  let color, cls, verdict;
+  if(margin >= 15){ color = '#52c41a'; cls = 'good'; verdict = '✅ 建议采购'; }
+  else if(margin >= 5){ color = '#fa8c16'; cls = 'mid'; verdict = '🟡 可考虑'; }
+  else if(margin >= 0){ color = '#fadb14'; cls = 'low'; verdict = '⚠️ 需砍价'; }
+  else { color = '#ff4d4f'; cls = 'bad'; verdict = '❌ 不建议'; }
+
+  bar.style.background = color;
+  const v = $('verdict');
+  v.className = 'verdict ' + cls + ' show';
+  v.textContent = verdict;
+}
+
+function renderRateTable(brand, source, price){
+  const tiers = TABLE[brand][source];
+  const tbody = $('rateTable').querySelector('tbody');
+  let html = '';
+  tiers.forEach(t => {
+    let active = false;
+    if(!isNaN(price) && price >= 0 && price >= t.min && price < t.max) active = true;
+    const range = (t.min===0?'0':t.min) + ' ~ ' + (t.max===Infinity?'+∞':t.max);
+    html += '<tr' + (active?' class="active"':'') + '>' +
+      '<td>' + range + '</td><td>' + fmt(t.r*100, 2) + '%</td><td>' + capText(t.cap) + '</td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function toggleFee(){
+  $('feeHead').classList.toggle('open');
+  $('feeBody').classList.toggle('show');
+}
+function toggleTable(){
+  $('tableHead').classList.toggle('open');
+  $('tableBody').classList.toggle('show');
+}
+
+function clearAll(){
+  $('price').value = '';
+  $('cost').value = '';
+  $('serviceFeeInput').value = '';
+  calc();
+}
+
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text);
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(ta);
+  return ok ? Promise.resolve() : Promise.reject();
+}
+
+function toast(msg){
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#fff;padding:13px 24px;border-radius:10px;font-size:14px;z-index:9999;pointer-events:none;transition:opacity 0.3s;';
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 1500);
+}
+
+function copyBackfill(){
+  const v = $('refBackfill').textContent;
+  if(v === '0.00'){ toast('请先输入销售价'); return; }
+  copyText(v).then(() => toast('已复制回填价 ¥' + v)).catch(() => toast('复制失败'));
+}
+
+function copyAll(){
+  const text =
+    '【回填价格计算】\n' +
+    '销售价：' + ($('price').value || '未填写') + ' 元\n' +
+    '成本价：' + ($('cost').value || '未填写') + ' 元\n' +
+    '服务费率：' + $('rateDisplay').textContent + '\n' +
+    '服务费：' + ($('serviceFeeInput').value || '0.00') + ' 元\n' +
+    '电商税：' + $('tax').textContent + '\n' +
+    '回填价格：¥' + $('refBackfill').textContent + '\n' +
+    '毛利润：' + $('grossProfit').textContent + '\n' +
+    '毛利率：' + $('grossMargin').textContent;
+  copyText(text).then(() => toast('全部结果已复制')).catch(() => toast('复制失败'));
+}
+
+restore();
+applyUrlParams();
+calc();
+</script>
+</body>
+</html>
