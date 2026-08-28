@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1677ff">
+<title>定价参考工具</title>
+<style>
+  :root {
+    --primary: #1677ff;
+    --green: #52c41a;
+    --orange: #fa8c16;
+    --gold: #fadb14;
+    --red: #ff4d4f;
+    --text: #1f2733;
+    --text-sub: #5b6472;
+    --text-weak: #9aa4b2;
+    --line: #eef1f6;
+    --bg: #f4f6fb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background:
+      radial-gradient(1000px 420px at 50% -180px, rgba(22,119,255,0.10), transparent 70%),
+      var(--bg);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { width: 100%; max-width: 520px; padding: 10px 12px; }
+
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 4px 2px 12px; }
+  .topbar .logo {
+    width: 40px; height: 40px; flex-shrink: 0;
+    background: linear-gradient(135deg, #4f8cff, #6a5cff);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; box-shadow: 0 4px 12px rgba(22,119,255,0.30);
+  }
+  .topbar .tt { flex: 1; min-width: 0; }
+  .topbar h1 { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .topbar .sub { font-size: 11px; color: var(--text-weak); margin-top: 1px; }
+  .badges { display: flex; gap: 6px; flex-shrink: 0; }
+  .badge { font-size: 11px; font-weight: 600; color: var(--primary); background: #e8f1ff; padding: 4px 10px; border-radius: 14px; white-space: nowrap; }
+
+  .card { background: #fff; border-radius: 16px; padding: 12px; margin-bottom: 10px; box-shadow: 0 3px 14px rgba(31,39,51,0.05); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cell label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; font-weight: 600; }
+  .cell.full { grid-column: 1 / -1; }
+  .field {
+    display: flex; align-items: center; height: 44px; background: #f7f9fc;
+    border: 1.5px solid transparent; border-radius: 11px; padding: 0 12px; transition: all 0.15s;
+  }
+  .field:focus-within { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22,119,255,0.10); }
+  .field input, .field select {
+    flex: 1; width: 100%; height: 100%; min-width: 0; border: none; background: transparent;
+    font-size: 16px; color: var(--text); outline: none; -webkit-appearance: none; appearance: none;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%239aa4b2' stroke-width='2.4'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0 center;
+  }
+  .field .unit { font-size: 12px; color: var(--text-weak); flex-shrink: 0; }
+
+  .price-hero {
+    background: linear-gradient(135deg, #1677ff 0%, #6a5cff 100%);
+    border-radius: 16px; padding: 14px 16px; margin-bottom: 10px;
+    box-shadow: 0 8px 22px rgba(22,119,255,0.28); color: #fff;
+  }
+  .price-hero label { font-size: 12px; opacity: 0.9; display: block; margin-bottom: 6px; font-weight: 600; }
+  .price-hero .row { display: flex; align-items: center; gap: 10px; }
+  .price-hero input {
+    flex: 1; height: 48px; background: rgba(255,255,255,0.14);
+    border: 1.5px solid rgba(255,255,255,0.35); border-radius: 12px;
+    font-size: 28px; font-weight: 800; color: #fff; padding: 0 14px; outline: none; min-width: 0;
+  }
+  .price-hero input::placeholder { color: rgba(255,255,255,0.55); }
+  .price-hero .unit { font-size: 15px; font-weight: 600; opacity: 0.9; }
+  .price-hero .ref-row {
+    margin-top: 9px; font-size: 12px; opacity: 0.92;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .price-hero .ref-row .fill-btn {
+    font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.4); color: #fff; border-radius: 14px;
+    padding: 3px 10px; cursor: pointer;
+  }
+
+  .summary-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 4px 2px; font-size: 13px; color: var(--text-sub); }
+  .summary-bar b { color: var(--primary); font-weight: 700; }
+
+  .phone-item { border: 1.5px solid #eef1f6; border-radius: 13px; padding: 11px 12px; margin-bottom: 9px; background: #fff; transition: all 0.15s; }
+  .phone-item.hit { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22,119,255,0.12); }
+  .ph-top { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .ph-imei { font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: 0.5px; font-family: 'SF Mono', Menlo, Consolas, monospace; }
+  .ph-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px; white-space: nowrap; }
+  .tag.grade { background: #e8f1ff; color: #1677ff; }
+  .tag.ram { background: #f0f5ff; color: #5b6472; }
+  .ph-meta { font-size: 12px; color: var(--text-weak); margin-bottom: 9px; }
+  .ph-meta b { color: var(--text-sub); font-weight: 600; }
+  .ph-bottom { display: flex; align-items: center; gap: 10px; }
+  .ph-consign { flex: 1; min-width: 0; }
+  .ph-consign label { font-size: 11px; color: var(--text-weak); display: block; margin-bottom: 3px; }
+  .consign-input {
+    width: 100%; height: 38px; border: 1.5px solid #e3e8f0; border-radius: 9px;
+    padding: 0 10px; font-size: 16px; font-weight: 700; color: var(--text);
+    outline: none; background: #f7f9fc; text-align: right;
+  }
+  .consign-input:focus { border-color: var(--primary); background: #fff; }
+  .ph-profit { text-align: right; flex-shrink: 0; }
+  .ph-profit .val { font-size: 20px; font-weight: 800; }
+  .ph-profit .val.pos { color: #389e0d; }
+  .ph-profit .val.neg { color: #cf1322; }
+  .ph-profit .val.na { color: #c0c6cf; }
+  .ph-profit .rate { font-size: 12px; color: var(--text-weak); margin-top: 1px; }
+
+  .empty-box { text-align: center; padding: 30px 10px; color: var(--text-weak); font-size: 13px; }
+
+  .search-row { display: flex; gap: 8px; }
+  .search-row .field { flex: 1; }
+  .search-row .btn { flex: 0 0 auto; padding: 0 16px; height: 44px; border-radius: 11px; border: none; background: linear-gradient(135deg, #4f8cff, #1677ff); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .hint { font-size: 12px; color: #9aa4b2; margin-top: 6px; }
+
+  .copy-card { display: flex; gap: 10px; }
+  .copy-btn {
+    flex: 1; height: 46px; border-radius: 12px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #4f8cff, #1677ff); color: #fff;
+    font-size: 15px; font-weight: 700; box-shadow: 0 5px 14px rgba(22,119,255,0.26);
+  }
+  .copy-btn:active { opacity: 0.88; }
+
+  .collapse-head { display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 13px; color: var(--text-sub); font-weight: 600; padding: 2px 0; }
+  .collapse-head .arrow { transition: transform 0.25s; color: var(--text-weak); }
+  .collapse-head.open .arrow { transform: rotate(180deg); }
+  .collapse-body { display: none; margin-top: 10px; }
+  .collapse-body.show { display: block; }
+
+  .rate-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rate-table th, .rate-table td { padding: 7px 6px; text-align: center; border-bottom: 1px solid #f2f5fa; }
+  .rate-table th { color: var(--text-weak); font-weight: 600; background: #fafbfd; }
+  .rate-table td { color: var(--text); }
+  .rate-table tr.active td { background: #e8f1ff; font-weight: 700; color: var(--primary); }
+
+  .foot-note { font-size: 11px; color: var(--text-weak); text-align: center; padding: 4px 0 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <div class="logo">💰</div>
+    <div class="tt">
+      <h1>定价参考工具</h1>
+      <div class="sub">净利润 = 结算价 − 总成本（不含税）· 拍拍可售中</div>
+    </div>
+    <div class="badges">
+      <span class="badge" id="badgeBrand">华为</span>
+      <span class="badge" style="cursor:pointer;background:#fff1e6;color:#d46b08;" onclick="syncData()" id="syncBadge">⟳ 同步数据</span>
+    </div>
+  </div>
+
+  <!-- 筛选 -->
+  <div class="card">
+    <div class="grid">
+      <div class="cell">
+        <label>品牌</label>
+        <div class="field"><select id="brand" onchange="onBrand()"></select></div>
+      </div>
+      <div class="cell">
+        <label>机型</label>
+        <div class="field"><select id="model" onchange="renderList()"></select></div>
+      </div>
+      <div class="cell">
+        <label>成色</label>
+        <div class="field"><select id="grade" onchange="renderList()"></select></div>
+      </div>
+      <div class="cell">
+        <label>来源</label>
+        <div class="field">
+          <select id="source" onchange="renderList()">
+            <option value="default">默认</option>
+            <option value="refurb">资源机/官翻</option>
+          </select>
+        </div>
+      </div>
+      <div class="cell">
+        <label>内存</label>
+        <div class="field"><select id="ram" onchange="renderList()"></select></div>
+      </div>
+      <div class="cell">
+        <label>存储</label>
+        <div class="field"><select id="storage" onchange="renderList()"></select></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 销售价 + 参考 -->
+  <div class="price-hero">
+    <label>销售价（面价）· 默认寄卖价，可逐台修改</label>
+    <div class="row">
+      <input type="text" inputmode="decimal" id="price" placeholder="填入销售价" autocomplete="off" oninput="onPriceInput()">
+      <span class="unit">元</span>
+    </div>
+    <div class="ref-row" id="refRow" style="display:none;">
+      <span>销售价参考 <b id="refPrice">-</b></span>
+      <button class="fill-btn" onclick="fillRef()">填入</button>
+    </div>
+  </div>
+
+  <!-- IMEI 单机查询 -->
+  <div class="card">
+    <div class="search-row">
+      <div class="field">
+        <input type="text" inputmode="numeric" id="imei" placeholder="单独查询某台 IMEI" autocomplete="off" oninput="onImeiInput()">
+      </div>
+      <button class="btn" onclick="queryImei()">查询</button>
+    </div>
+    <div class="hint" id="imeiHint">输入 15 位 IMEI 定位单台手机</div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="summary-bar" id="summaryBar">请选择机型并填入销售价</div>
+  <div id="phoneList"></div>
+
+  <!-- 复制改价清单 -->
+  <div class="card copy-card" id="copyCard" style="display:none;">
+    <button class="copy-btn" onclick="copyList()">📋 复制改价清单（IMEI + 寄卖价）</button>
+  </div>
+
+  <!-- 费率表 -->
+  <div class="card">
+    <div class="collapse-head" id="tableHead" onclick="toggle()">
+      <span>📊 阶梯服务费率表</span>
+      <span class="arrow">▾</span>
+    </div>
+    <div class="collapse-body" id="tableBody">
+      <table class="rate-table" id="rateTable">
+        <thead><tr><th>区间（元）</th><th>费率</th><th>封顶</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="foot-note" id="footNote"></div>
+
+</div>
+
+<script>
+const DATA = {"meta":{"syncedAt":"2026-08-23 09:10","onsaleCount":30,"matchedCount":30,"src":"pp_grab.json","hostIp":"192.168.1.29"},"phones":[{"imei":"867569088216060","brand":"华为","model":"Pura X Max 典藏版","ram":"16G","storage":"1TB","grade":"99新","grade2d":"99新","name":"华为 Pura X Max 典藏版 国行 星际蓝 16G+1T 全网通手机","paipaiPrice":"10699","cost":"10399","supplier":"闲鱼散货","remark":"银行卡转给邬，邬支付宝付款；内爆"},{"imei":"864026072755671","brand":"华为","model":"Pura X","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Pura X 国行 零度白 12G+512G 全网通手机","paipaiPrice":"4259","cost":"3558","supplier":"陈海旭","remark":""},{"imei":"865877074873030","brand":"华为","model":"Mate XTs 非凡大师","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Mate XTs 非凡大师 国行 瑞红 16G+512G 全网通手机","paipaiPrice":"13599","cost":"10903","supplier":"老赵","remark":"内爆"},{"imei":"860577075138293","brand":"华为","model":"Pura X 典藏版","ram":"16G","storage":"1TB","grade":"95新","grade2d":"95新","name":"华为 Pura X 典藏版 国行 型格红 16G+1T 全网通","paipaiPrice":"4699","cost":"3900","supplier":"贾林","remark":""},{"imei":"862078085122474","brand":"华为","model":"Mate X6","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Mate X6 国行 深海蓝 12G+512G 全网通","paipaiPrice":"7699","cost":"6300","supplier":"老赵","remark":""},{"imei":"867558081228446","brand":"华为","model":"Pura X","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Pura X 国行 零度白 12G+512G 全网通","paipaiPrice":"4249","cost":"3595","supplier":"闲鱼散货","remark":""},{"imei":"866790080050957","brand":"华为","model":"Mate XTs 非凡大师","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Mate XTs 非凡大师 国行 皓白 16G+512G 全网通","paipaiPrice":"13599","cost":"12730","supplier":"闲鱼散货","remark":"银行卡转给邬，邬支付宝付款"},{"imei":"866315072809192","brand":"华为","model":"Pura X","ram":"12G","storage":"512G","grade":"95新","grade2d":"95新","name":"华为 Pura X 国行 月影灰 12G+512G 全网通","paipaiPrice":"4279","cost":"3227.9","supplier":"闲鱼散货","remark":""},{"imei":"860847076874638","brand":"荣耀","model":"Magic V Flip","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V Flip 国行 山茶白 12G+512G 全网通","paipaiPrice":"1839","cost":"1413","supplier":"闲鱼散货","remark":"内爆"},{"imei":"860847070526184","brand":"荣耀","model":"Magic V Flip","ram":"12G","storage":"256G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V Flip 国行 山茶白 12G+256G 全网通","paipaiPrice":"1989","cost":"1498","supplier":"闲鱼散货","remark":"内爆"},{"imei":"860847077298019","brand":"荣耀","model":"Magic V Flip","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V Flip 国行 香槟粉 12G+512G 全网通","paipaiPrice":"1899","cost":"1486","supplier":"云锦快修","remark":""},{"imei":"860847077243320","brand":"荣耀","model":"Magic V Flip","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V Flip 国行 香槟粉 12G+512G 全网通","paipaiPrice":"1799","cost":"1383","supplier":"闲鱼散货","remark":"内爆"},{"imei":"860659077774885","brand":"荣耀","model":"Magic V5","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V5 国行 曙光金 16G+512G 全网通","paipaiPrice":"6699","cost":"5560","supplier":"闲鱼散货","remark":"内爆，摄像头坏"},{"imei":"860847078363242","brand":"荣耀","model":"Magic V Flip","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V Flip 国行 山茶白 12G+512G 全网通","paipaiPrice":"1859","cost":"1396","supplier":"云锦快修","remark":"内爆"},{"imei":"866440080465371","brand":"荣耀","model":"Magic V6","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V6 国行 旭日金 16G+512G 全网通","paipaiPrice":"8997","cost":"8250","supplier":"张迈","remark":""},{"imei":"865640075577632","brand":"vivo","model":"X200 Ultra","ram":"16G","storage":"512G","grade":"95新","grade2d":"95新","name":"vivo X200 Ultra 国行 黑Ka 16G+512G 全网通","paipaiPrice":"4199","cost":"3700","supplier":"闲鱼散货","remark":""},{"imei":"860847076384026","brand":"荣耀","model":"Magic V Flip","ram":"12G","storage":"1TB","grade":"99新","grade2d":"99新","name":"荣耀 Magic V Flip 国行 香槟粉 12G+1T 全网通","paipaiPrice":"1999","cost":"1486","supplier":"闲鱼散货","remark":"大屏内爆"},{"imei":"860847076640518","brand":"荣耀","model":"Magic V Flip","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"荣耀 Magic V Flip 国行 山茶白 12G+512G 全网通","paipaiPrice":"1829","cost":"1475","supplier":"闲鱼散货","remark":"包邮内爆"},{"imei":"860813085654197","brand":"华为","model":"Mate X7 典藏版","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Mate X7 典藏版 国行 云锦蓝 16G+512G 全网通","paipaiPrice":"10689","cost":"9330","supplier":"老赵","remark":"内外爆"},{"imei":"866315078752255","brand":"华为","model":"Pura X","ram":"12G","storage":"512G","grade":"95新","grade2d":"95新","name":"华为 Pura X 国行 幻夜黑 12G+512G 全网通","paipaiPrice":"4039","cost":"3200","supplier":"闲鱼散货","remark":"小屏外爆，大屏瑕疵"},{"imei":"868952072295036","brand":"华为","model":"Mate X6","ram":"16G","storage":"512G","grade":"9新","grade2d":"9成新","name":"华为 Mate X6 国行 星云灰 16G+512G 全网通","paipaiPrice":"6899","cost":"6440","supplier":"贾林","remark":""},{"imei":"864026072061211","brand":"华为","model":"Pura X","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Pura X 国行 月影灰 12G+512G 全网通","paipaiPrice":"4299","cost":"4880","supplier":"咸鱼散货","remark":""},{"imei":"867590072194899","brand":"华为","model":"Mate X6","ram":"16G","storage":"1TB","grade":"99新","grade2d":"99新","name":"华为 Mate X6 国行 星云灰 16G+1T 全网通 先锋版","paipaiPrice":"7989","cost":"7200","supplier":"老赵","remark":""},{"imei":"865877074554499","brand":"华为","model":"Mate XTs 非凡大师","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Mate XTs 非凡大师 国行 瑞红 16G+512G 全网通","paipaiPrice":"13299","cost":"11433","supplier":"咸鱼散货","remark":""},{"imei":"860577074837143","brand":"华为","model":"Pura X 典藏版","ram":"16G","storage":"512G","grade":"95新","grade2d":"95新","name":"华为 Pura X 典藏版 国行 型格红 16G+512G 全网通","paipaiPrice":"4299","cost":"3540","supplier":"贾林","remark":""},{"imei":"866315079863135","brand":"华为","model":"Pura X","ram":"12G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Pura X 国行 零度白 12G+512G 全网通","paipaiPrice":"4299","cost":"3200","supplier":"贾林","remark":""},{"imei":"866315073030699","brand":"华为","model":"Pura X","ram":"12G","storage":"512G","grade":"95新","grade2d":"95新","name":"华为 Pura X 国行 月影灰 12G+512G 全网通","paipaiPrice":"4299","cost":"3250","supplier":"闲鱼散货","remark":""},{"imei":"865814078532908","brand":"华为","model":"Pura X 典藏版","ram":"16G","storage":"512G","grade":"95新","grade2d":"95新","name":"华为 Pura X 典藏版 国行 型格红 16G+512G 全网通","paipaiPrice":"4299","cost":"3770","supplier":"贾林","remark":""},{"imei":"865489071454333","brand":"华为","model":"Mate XT 非凡大师","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Mate XT 非凡大师 国行 玄黑 16G+512G 全网通","paipaiPrice":"9999","cost":"9409","supplier":"朱晨宏","remark":""},{"imei":"865877078101032","brand":"华为","model":"Mate XTs 非凡大师","ram":"16G","storage":"512G","grade":"99新","grade2d":"99新","name":"华为 Mate XTs 非凡大师 国行 玄黑 16G+512G 全网通","paipaiPrice":"13199","cost":"12860","supplier":"杨杰","remark":""}],"selling":[{"model":"Pura X","ram":"12G","storage":"256G","grade":"99新","price":"4300"},{"model":"Pura X","ram":"12G","storage":"256G","grade":"95新","price":"4150"},{"model":"Pura X","ram":"12G","storage":"512G","grade":"99新","price":"4300"},{"model":"Pura X","ram":"12G","storage":"512G","grade":"95新","price":"4100"},{"model":"Pura X","ram":"16G","storage":"512G","grade":"99新","price":"4500"},{"model":"Pura X","ram":"16G","storage":"512G","grade":"95新","price":"4200"},{"model":"Pura X","ram":"16G","storage":"1TB","grade":"99新","price":"5000"},{"model":"Pura X","ram":"16G","storage":"1TB","grade":"95新","price":"4700"},{"model":"Magic V Flip","ram":"12G","storage":"512G","grade":"99新","price":"2000"},{"model":"Magic V Flip","ram":"12G","storage":"512G","grade":"95新","price":"1700"},{"model":"Mate X5","ram":"12G","storage":"256G","grade":"99新","price":"4450"},{"model":"Mate X5","ram":"12G","storage":"256G","grade":"95新","price":"4200"},{"model":"Mate X5","ram":"12G","storage":"512G","grade":"99新","price":"4700"},{"model":"Mate X5","ram":"12G","storage":"512G","grade":"95新","price":"4500"},{"model":"Mate X5","ram":"16G","storage":"512G","grade":"99新","price":"5100"},{"model":"Mate X5","ram":"16G","storage":"512G","grade":"95新","price":"4800"},{"model":"Mate X6","ram":"12G","storage":"256G","grade":"99新","price":"7299"},{"model":"Mate X6","ram":"12G","storage":"256G","grade":"95新","price":"7000"},{"model":"Mate X6","ram":"12G","storage":"512G","grade":"99新","price":"7399"},{"model":"Mate X6","ram":"12G","storage":"512G","grade":"95新","price":"7000"},{"model":"Mate X6","ram":"16G","storage":"512G","grade":"99新","price":"7600"},{"model":"Mate X6","ram":"16G","storage":"512G","grade":"95新","price":"7200"},{"model":"Mate X7","ram":"12G","storage":"512G","grade":"99新","price":"10100"},{"model":"Mate X7","ram":"12G","storage":"512G","grade":"95新","price":"9600"},{"model":"Mate X7","ram":"16G","storage":"512G","grade":"99新","price":"10839"},{"model":"Mate X7","ram":"16G","storage":"512G","grade":"95新","price":"10400"},{"model":"N3 Flip","ram":"12G","storage":"256G","grade":"99新","price":"1800"},{"model":"N3 Flip","ram":"12G","storage":"256G","grade":"95新","price":"1600"},{"model":"N3 Flip","ram":"12G","storage":"512G","grade":"99新","price":"1950"},{"model":"N3 Flip","ram":"12G","storage":"512G","grade":"95新","price":"1800"},{"model":"Z Flip 6","ram":"12G","storage":"256G","grade":"99新","price":"2200"},{"model":"Z Flip 6","ram":"12G","storage":"256G","grade":"95新","price":"2000"},{"model":"Z Flip 6","ram":"12G","storage":"512G","grade":"99新","price":"2500"},{"model":"Z Flip 6","ram":"12G","storage":"512G","grade":"95新","price":"2200"},{"model":"Magic V5","ram":"12G","storage":"256G","grade":"99新","price":"5800"},{"model":"Magic V5","ram":"12G","storage":"256G","grade":"95新","price":"5700"},{"model":"Magic V5","ram":"16G","storage":"512G","grade":"99新","price":"6300"},{"model":"Magic V5","ram":"16G","storage":"512G","grade":"95新","price":"6000"},{"model":"Magic V5","ram":"16G","storage":"1TB","grade":"99新","price":"6688"},{"model":"Magic V5","ram":"16G","storage":"1TB","grade":"95新","price":"6300"},{"model":"X Fold 3","ram":"12G","storage":"256G","grade":"99新","price":"3478"},{"model":"X Fold 3","ram":"12G","storage":"256G","grade":"95新","price":"2850"},{"model":"X Fold 3","ram":"16G","storage":"512G","grade":"99新","price":"3588"},{"model":"X Fold 3","ram":"16G","storage":"512G","grade":"95新","price":"2999"}]};
+
+const TABLE = {
+  apple: {
+    default: [
+      {min:0,max:1000,r:0.21,cap:1/0},{min:1000,max:2000,r:0.12,cap:1/0},
+      {min:2000,max:2500,r:0.11,cap:1/0},{min:2500,max:3000,r:0.10,cap:1/0},
+      {min:3000,max:4000,r:0.09,cap:1/0},{min:4000,max:6500,r:0.07,cap:1/0},
+      {min:6500,max:1/0,r:0.06,cap:450}
+    ],
+    refurb: [{min:0,max:1/0,r:0.036,cap:1/0}]
+  },
+  other: {
+    default: [
+      {min:0,max:500,r:0.20,cap:1/0},{min:500,max:1000,r:0.15,cap:1/0},
+      {min:1000,max:1500,r:0.13,cap:1/0},{min:1500,max:2000,r:0.11,cap:1/0},
+      {min:2000,max:2500,r:0.10,cap:1/0},{min:2500,max:3000,r:0.09,cap:1/0},
+      {min:3000,max:5000,r:0.07,cap:1/0},{min:5000,max:1/0,r:0.06,cap:550}
+    ],
+    refurb: [{min:0,max:1/0,r:0.036,cap:1/0}]
+  }
+};
+
+const GRADE_ORDER = ['99新','95新','9新','8新以下'];
+
+function $(id){ return document.getElementById(id); }
+function fmt(v,d){ return Number(v).toFixed(d); }
+function capText(cap){ return cap === Infinity ? '不封顶' : ('¥' + fmt(cap,0)); }
+function brandKey(b){ return (b && (b.indexOf('Apple')>=0 || b.indexOf('苹果')>=0)) ? 'apple' : 'other'; }
+function num(v){ const n = parseFloat(String(v).replace(/[,，\s]/g,'')); return isNaN(n) ? 0 : n; }
+function uniq(arr){ return Array.from(new Set(arr)); }
+
+function mapPhones(list){
+  return (list || []).map(p => ({
+    imei: p.imei, brand: p.brand, model: p.model,
+    ram: p.ram, storage: p.storage, grade: p.grade, grade2d: p.grade2d,
+    name: p.name, cost: p.cost, supplier: p.supplier, remark: p.remark,
+    paipaiPrice: num(p.paipaiPrice)
+  }));
+}
+
+let META = DATA.meta || {};
+let PHONES = mapPhones(DATA.phones);
+let SELLING = DATA.selling || [];
+let overridePrice = {};   // imei -> 手动寄卖价
+let SYNC_BASE = (function(){
+  try { return localStorage.getItem('pricing_sync_base') || ('http://' + (META.hostIp || '127.0.0.1') + ':8001'); }
+  catch(e){ return 'http://' + (META.hostIp || '127.0.0.1') + ':8001'; }
+})();
+
+function initSelects(){
+  const brands = uniq(PHONES.map(p => p.brand).filter(Boolean));
+  $('brand').innerHTML = brands.map(b => '<option value="' + b + '">' + b + '</option>').join('');
+  const hw = brands.find(b => b.indexOf('华为') >= 0);
+  if(hw) $('brand').value = hw;
+  onBrand();
+
+  const grades = uniq(PHONES.map(p => p.grade).filter(Boolean)).sort((a,b) =>
+    (GRADE_ORDER.indexOf(a)>=0?GRADE_ORDER.indexOf(a):99) - (GRADE_ORDER.indexOf(b)>=0?GRADE_ORDER.indexOf(b):99));
+  $('grade').innerHTML = '<option value="">全部成色</option>' + grades.map(g => '<option value="' + g + '">' + g + '</option>').join('');
+
+  const rams = uniq(PHONES.map(p => p.ram).filter(Boolean)).sort((a,b) => num(a) - num(b));
+  $('ram').innerHTML = '<option value="">全部内存</option>' + rams.map(r => '<option value="' + r + '">' + r + '</option>').join('');
+
+  const stos = uniq(PHONES.map(p => p.storage).filter(Boolean)).sort((a,b) => storageVal(a) - storageVal(b));
+  $('storage').innerHTML = '<option value="">全部存储</option>' + stos.map(s => '<option value="' + s + '">' + s + '</option>').join('');
+}
+
+function storageVal(s){ if(!s) return 0; const n = num(s); return s.indexOf('T')>=0 ? n*1024 : n; }
+
+function onBrand(){
+  const brand = $('brand').value;
+  const models = uniq(PHONES.filter(p => p.brand === brand).map(p => p.model).filter(Boolean));
+  $('model').innerHTML = '<option value="">全部机型</option>' + models.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+  $('badgeBrand').textContent = brand ? brand.replace(/[（）()]/g,'') : '全部';
+  renderList();
+}
+
+function matchTier(price, brand, source){
+  const tiers = TABLE[brandKey(brand)][source] || TABLE.other.default;
+  for(const t of tiers){ if(price >= t.min && price < t.max) return t; }
+  return tiers[tiers.length-1];
+}
+
+function calcPhone(p, price, source){
+  const c = matchTier(price, p.brand, source);
+  let svc = price * c.r, capped = false;
+  if(svc > c.cap){ svc = c.cap; capped = true; }
+  const tax = price * 0.01;
+  const settle = price - svc - tax;
+  const hasCost = p.cost !== '' && num(p.cost) > 0;
+  const profit = hasCost ? settle - num(p.cost) : null;
+  const rate = hasCost && settle > 0 ? (profit / settle) * 100 : null;
+  return { svc, tax, settle, hasCost, profit, rate };
+}
+
+function getPrice(imei){
+  if(overridePrice[imei] !== undefined && String(overridePrice[imei]) !== '') return num(overridePrice[imei]);
+  return num($('price').value);
+}
+
+function filterPhones(){
+  const brand = $('brand').value, model = $('model').value, grade = $('grade').value;
+  const ram = $('ram').value, storage = $('storage').value;
+  return PHONES.filter(p => {
+    if(brand && p.brand !== brand) return false;
+    if(model && p.model !== model) return false;
+    if(grade && p.grade !== grade) return false;
+    if(ram && p.ram !== ram) return false;
+    if(storage && p.storage !== storage) return false;
+    return true;
+  });
+}
+
+function matchRefPrice(){
+  const model = $('model').value, grade = $('grade').value, ram = $('ram').value, storage = $('storage').value;
+  if(!model || !grade || !ram || !storage) return null;
+  const hit = SELLING.find(s => s.model === model && s.grade === grade && s.ram === ram && s.storage === storage);
+  return hit ? num(hit.price) : null;
+}
+
+function renderList(){
+  const source = $('source').value;
+  const list = filterPhones();
+  const box = $('phoneList');
+  const bar = $('summaryBar');
+  const copyCard = $('copyCard');
+  renderRateTable(num($('price').value), source);
+
+  // 销售价参考
+  const ref = matchRefPrice();
+  if(ref && ref > 0){
+    $('refRow').style.display = 'flex';
+    $('refPrice').textContent = '¥' + ref;
+  } else {
+    $('refRow').style.display = 'none';
+  }
+
+  if(list.length === 0){
+    bar.textContent = '未匹配到手机';
+    box.innerHTML = '<div class="empty-box">当前筛选条件下暂无手机<br>可放宽成色 / 内存 / 存储条件</div>';
+    copyCard.style.display = 'none';
+    return;
+  }
+
+  const withCost = list.filter(p => p.cost !== '' && num(p.cost) > 0);
+  const price0 = num($('price').value);
+
+  if(isNaN(price0) || price0 <= 0){
+    bar.innerHTML = '共 <b>' + list.length + '</b> 台 · 已匹配总成本 <b>' + withCost.length + '</b> 台 · 请填入销售价';
+    box.innerHTML = '<div class="empty-box">请在上方填入销售价，自动计算每台净利润</div>';
+    copyCard.style.display = 'none';
+    return;
+  }
+
+  const enriched = list.map(p => {
+    const price = getPrice(p.imei);
+    const c = calcPhone(p, price, source);
+    return Object.assign({}, p, { price, svc: c.svc, settle: c.settle, hasCost: c.hasCost, profit: c.profit, rate: c.rate });
+  }).sort((a,b) => {
+    if(a.hasCost && b.hasCost) return (b.profit||0) - (a.profit||0);
+    if(a.hasCost) return -1;
+    if(b.hasCost) return 1;
+    return 0;
+  });
+
+  bar.innerHTML = '可售 <b>' + list.length + '</b> 台 · 匹配总成本 <b>' + withCost.length + '</b> 台 · 销售价 <b>¥' + fmt(price0,0) + '</b>';
+
+  let html = '';
+  enriched.forEach(p => {
+    const posCls = !p.hasCost ? 'na' : (p.profit >= 0 ? 'pos' : 'neg');
+    const profitText = !p.hasCost ? '待录' : ((p.profit >= 0 ? '¥' : '-¥') + fmt(Math.abs(p.profit),2));
+    const rateText = !p.hasCost ? '—' : fmt(p.rate,2) + '%';
+    const priceVal = (overridePrice[p.imei] !== undefined && String(overridePrice[p.imei]) !== '') ? overridePrice[p.imei] : $('price').value;
+    html += '<div class="phone-item" id="ph_' + p.imei + '">' +
+      '<div class="ph-top">' +
+        '<span class="ph-imei">' + p.imei + '</span>' +
+        '<span class="ph-tags">' +
+          '<span class="tag grade">' + (p.grade2d || p.grade || '未知') + '</span>' +
+          (p.ram ? '<span class="tag ram">' + p.ram + '+' + p.storage + '</span>' : '') +
+        '</span>' +
+      '</div>' +
+      '<div class="ph-meta">' +
+        (p.supplier ? '供应商 <b>' + p.supplier + '</b> · ' : '') +
+        '总成本 ' + (p.hasCost ? '<b>¥' + fmt(num(p.cost),2) + '</b>' : '<b style="color:#cf1322">待录</b>') +
+        (p.remark ? '<br>备注：' + p.remark : '') +
+      '</div>' +
+      '<div class="ph-bottom">' +
+        '<div class="ph-consign">' +
+          '<label>寄卖价</label>' +
+          '<input class="consign-input" inputmode="decimal" value="' + priceVal + '" oninput="onConsignInput(\'' + p.imei + '\', this.value)">' +
+        '</div>' +
+        '<div class="ph-profit">' +
+          '<div class="val ' + posCls + '" id="pv_' + p.imei + '">' + profitText + '</div>' +
+          '<div class="rate" id="pr_' + p.imei + '">净利率 ' + rateText + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  box.innerHTML = html;
+  copyCard.style.display = 'flex';
+
+  const q = $('imei').value.replace(/\D/g,'').slice(0,15);
+  if(q && $('ph_' + q)){
+    const el = $('ph_' + q);
+    el.classList.add('hit');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+/* 逐台修改寄卖价，只重算该条净利润（不重建列表，避免失焦） */
+function onConsignInput(imei, val){
+  overridePrice[imei] = val;
+  const p = PHONES.find(x => x.imei === imei);
+  if(!p) return;
+  const price = num(val);
+  const el = $('pv_' + imei), rateEl = $('pr_' + imei);
+  if(isNaN(price) || price <= 0){
+    el.textContent = '待录'; el.className = 'val na';
+    rateEl.textContent = '净利率 —';
+    return;
+  }
+  const c = calcPhone(p, price, $('source').value);
+  const posCls = !c.hasCost ? 'na' : (c.profit >= 0 ? 'pos' : 'neg');
+  el.textContent = !c.hasCost ? '待录' : ((c.profit >= 0 ? '¥' : '-¥') + fmt(Math.abs(c.profit),2));
+  el.className = 'val ' + posCls;
+  rateEl.textContent = '净利率 ' + (!c.hasCost ? '—' : fmt(c.rate,2) + '%');
+}
+
+function onPriceInput(){
+  overridePrice = {};   // 改全局销售价 -> 重置逐台覆盖
+  renderList();
+}
+
+function fillRef(){
+  const ref = matchRefPrice();
+  if(ref && ref > 0){ $('price').value = ref; onPriceInput(); }
+}
+
+function renderRateTable(price, source){
+  const brand = $('brand').value || '华为';
+  const tiers = TABLE[brandKey(brand)][source] || TABLE.other.default;
+  const tbody = $('rateTable').querySelector('tbody');
+  let html = '';
+  tiers.forEach(t => {
+    const active = (!isNaN(price) && price >= 0 && price >= t.min && price < t.max);
+    const range = (t.min===0?'0':t.min) + ' ~ ' + (t.max===Infinity?'+∞':t.max);
+    html += '<tr' + (active?' class="active"':'') + '>' +
+      '<td>' + range + '</td><td>' + fmt(t.r*100,2) + '%</td><td>' + capText(t.cap) + '</td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+/* 复制改价清单 */
+function copyList(){
+  const source = $('source').value;
+  const list = filterPhones().map(p => {
+    const price = getPrice(p.imei);
+    return { imei: p.imei, model: p.model, grade: p.grade2d || p.grade, price };
+  });
+  const valid = list.filter(x => x.price > 0);
+  if(valid.length === 0){ toast('请先填入销售价'); return; }
+  let text = '【改价清单】' + valid.length + ' 台\n';
+  valid.forEach(x => {
+    text += x.imei + '\t' + x.price + '\n';
+  });
+  copyText(text).then(() => toast('已复制 ' + valid.length + ' 条改价信息')).catch(() => toast('复制失败'));
+}
+
+function onImeiInput(){
+  const q = $('imei').value.replace(/\D/g,'').slice(0,15);
+  const hint = $('imeiHint');
+  if(!q){ hint.textContent = '输入 15 位 IMEI 定位单台手机'; hint.style.color = '#9aa4b2'; return; }
+  const p = PHONES.find(x => x.imei === q);
+  if(p){
+    hint.textContent = '已定位：' + p.brand + ' ' + p.model + ' · ' + (p.grade2d||'');
+    hint.style.color = '#389e0d';
+  } else {
+    hint.textContent = '当前可售中未找到该 IMEI（共 ' + PHONES.length + ' 台）';
+    hint.style.color = '#cf1322';
+  }
+}
+
+function queryImei(){
+  const q = $('imei').value.replace(/\D/g,'').slice(0,15);
+  if(!q) return;
+  const p = PHONES.find(x => x.imei === q);
+  if(!p){ onImeiInput(); return; }
+  if(p.brand){ $('brand').value = p.brand; onBrand(); }
+  $('model').value = p.model;
+  $('grade').value = ''; $('ram').value = ''; $('storage').value = '';
+  renderList();
+  setTimeout(() => {
+    const el = $('ph_' + q);
+    if(el){ el.classList.add('hit'); el.scrollIntoView({ behavior:'smooth', block:'center' }); }
+  }, 100);
+}
+
+function toggle(){
+  $('tableHead').classList.toggle('open');
+  $('tableBody').classList.toggle('show');
+}
+
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(ta);
+  return ok ? Promise.resolve() : Promise.reject();
+}
+
+function toast(msg){
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#fff;padding:13px 24px;border-radius:10px;font-size:14px;z-index:9999;pointer-events:none;transition:opacity 0.3s;';
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 1500);
+}
+
+function updateFootNote(){
+  $('footNote').innerHTML = '数据源：拍拍后台「商家商品导出」· 可售中 ' + (META.onsaleCount||0) + ' 台 · 匹配台账总成本 ' + (META.matchedCount||0) + ' 台 · 销售价参考 ' + SELLING.length + ' 条<br>更新时间：' + (META.syncedAt || '未知');
+}
+
+function syncData(){
+  const base = prompt('同步服务地址（电脑局域网 IP + 端口）', SYNC_BASE);
+  if(!base) return;
+  SYNC_BASE = base;
+  try { localStorage.setItem('pricing_sync_base', base); } catch(e){}
+  const url = base.replace(/\/+$/, '') + '/sync';
+  const badge = $('syncBadge');
+  badge.textContent = '⟳ 同步中…';
+  fetch(url)
+    .then(r => r.json())
+    .then(res => {
+      if(!res.ok){
+        badge.textContent = '⟳ 同步数据';
+        toast('同步失败：' + (res.error || '未知错误'));
+        return;
+      }
+      const d = res.data;
+      META = d.meta || {};
+      PHONES = mapPhones(d.phones);
+      SELLING = d.selling || [];
+      overridePrice = {};
+      initSelects();
+      renderList();
+      updateFootNote();
+      badge.textContent = '⟳ 同步数据';
+      toast('同步成功！可售 ' + (META.onsaleCount||0) + ' 台');
+    })
+    .catch(function(){
+      badge.textContent = '⟳ 同步数据';
+      toast('同步失败：连不上同步服务，请确认电脑端同步服务已启动（端口 8001）');
+    });
+}
+
+initSelects();
+updateFootNote();
+renderList();
+</script>
+</body>
+</html>
