@@ -700,24 +700,77 @@ function copyText(text) {
 }
 
 function copySettlement() {
-  // 复制结算价 + 服务费/物流费/电商税明细（参考回填工具的「复制回填价」）
-  const sp = parseFloat(document.getElementById('cc-selling-price').value) || 0;
-  const st = document.getElementById('cc-settlement-price').value;
-  if (!st || sp <= 0) { toast('请先选机型/填销售价'); return; }
+  // 复制完整核算结果：成本（采购价/配件/人工）+ 结算（服务费/物流费/电商税）+ 利润
   const brand = document.getElementById('cc-brand').value;
   const model = document.getElementById('cc-model').value;
   const ram = document.getElementById('cc-ram')?.value || '';
   const storage = document.getElementById('cc-storage')?.value || '';
-  const source = document.getElementById('cc-source').value;
-  const r = calcSettlement(sp, brand, source);
+  const condition = document.getElementById('cc-condition')?.value || '';
+
+  const purchasePrice = toNumber(document.getElementById('cc-purchase-price').value);
+  const ljhhPrice = toNumber(document.getElementById('cc-ljhh-price').value);
+  const laborFee = toNumber(document.getElementById('cc-labor-fee').value);
+  const sellingPrice = toNumber(document.getElementById('cc-selling-price').value);
+  const settlePrice = toNumber(document.getElementById('cc-settlement-price').value);
+
+  // 配件明细（与 calc() 收集逻辑一致）
+  const damagedParts = [];
+  document.querySelectorAll('#cc-damaged-parts > div').forEach(div => {
+    const sel = div.querySelector('select');
+    const priceInput = div.querySelector('input[type=number]');
+    if (!sel || !sel.value) return;
+    if (sel.value === 'manual') {
+      const p = toNumber(priceInput?.value);
+      if (p > 0) damagedParts.push({ name: '手动配件', price: p });
+    } else if (sel.value.startsWith('predef_')) {
+      const p = toNumber(priceInput?.value);
+      if (p > 0) damagedParts.push({ name: sel.value.replace('predef_', ''), price: p });
+    } else if (sel.value.startsWith('kb_')) {
+      const opt = sel.options[sel.selectedIndex];
+      const p = toNumber(priceInput?.value || opt.dataset.price);
+      if (p > 0) {
+        const name = opt.dataset.remark ? `${opt.dataset.name}(${opt.dataset.remark})` : opt.dataset.name;
+        damagedParts.push({ name, price: p });
+      }
+    }
+  });
+  const partsCost = Math.round(damagedParts.reduce((s, p) => s + p.price, 0) * 100) / 100;
+  const totalCost = Math.round((purchasePrice + partsCost + laborFee) * 100) / 100;
+
+  if (totalCost <= 0 && sellingPrice <= 0) { toast('请先填采购价/选机型'); return; }
+
+  const r = calcSettlement(sellingPrice, brand, document.getElementById('cc-source').value);
+  const profit = Math.round((settlePrice - totalCost) * 100) / 100;
+  const profitRate = settlePrice > 0 ? Math.round((profit / settlePrice) * 1000) / 10 : 0;
+
+  const COND_LABELS = { brand_new: '充新', excellent: '99新', good: '95新', fair: '9新', outer_broken: '外爆', broken: '内爆可测', poor: '85新以下' };
+
   const lines = [];
-  if (brand && model) lines.push(brand + ' ' + model + (ram ? ' ' + ram : '') + (storage ? ' ' + storage : ''));
-  lines.push('销售价 ' + sp + ' 元');
+  if (brand && model) {
+    lines.push(brand + ' ' + model + (ram ? ' ' + ram : '') + (storage ? ' ' + storage : '') + (COND_LABELS[condition] ? '（' + COND_LABELS[condition] + '）' : ''));
+  } else {
+    lines.push('成本核算');
+  }
+  lines.push('');
+  lines.push('【成本】');
+  lines.push('采购价 ' + (purchasePrice || 0) + ' 元');
+  if (ljhhPrice > 0) lines.push('靓机汇参考价 ' + ljhhPrice + ' 元');
+  damagedParts.forEach(p => lines.push('  配件 ' + p.name + ' ' + p.price + ' 元'));
+  lines.push('配件费 ' + (partsCost || 0) + ' 元');
+  lines.push('人工费 ' + (laborFee || 0) + ' 元');
+  lines.push('总成本 ' + totalCost + ' 元');
+  lines.push('');
+  lines.push('【结算】');
+  lines.push('销售价 ' + (sellingPrice || 0) + ' 元');
   lines.push('服务费 -' + (r.serviceFee || 0) + ' 元（' + r.ratePercent + '）');
   lines.push('物流费 -' + (r.logisticsFee || 0) + ' 元');
   lines.push('电商税 -' + (r.tax || 0) + ' 元（1%）');
-  lines.push('结算价 ' + st + ' 元');
-  copyText(lines.join('\n')).then(() => toast('已复制结算价')).catch(() => toast('复制失败'));
+  lines.push('结算价 ' + (settlePrice || 0) + ' 元');
+  lines.push('');
+  lines.push('【利润】');
+  lines.push('利润 ' + (profit >= 0 ? '+' : '') + profit + ' 元（' + profitRate + '%）');
+
+  copyText(lines.join('\n')).then(() => toast('已复制全部核算结果')).catch(() => toast('复制失败'));
 }
 
 function onSettlementInput() {
