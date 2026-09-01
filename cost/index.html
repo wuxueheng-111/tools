@@ -187,6 +187,7 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
           <span>服务费 <b id="cc-bd-fee" style="color:#fa8c16">-</b></span>
           <span style="margin-left:12px;">物流费 <b id="cc-bd-logistics" style="color:#fa8c16">-</b></span>
           <span style="margin-left:12px;">电商税 <b id="cc-bd-tax" style="color:#fa8c16">-</b></span>
+          <button type="button" onclick="copySettlement()" style="margin-left:12px;border:1px solid #1677ff;color:#1677ff;background:#fff;border-radius:6px;padding:2px 10px;font-size:11px;cursor:pointer;">📋 复制</button>
         </div>
       </div>
     </div>
@@ -684,6 +685,39 @@ function updateSettleBreakdown() {
   document.getElementById('cc-bd-logistics').textContent = '-' + (r.logisticsFee || 0) + '元';
   document.getElementById('cc-bd-tax').textContent = '-' + (r.tax || 0) + '元（1%）';
   wrap.style.display = 'block';
+}
+
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  return ok ? Promise.resolve() : Promise.reject();
+}
+
+function copySettlement() {
+  // 复制结算价 + 服务费/物流费/电商税明细（参考回填工具的「复制回填价」）
+  const sp = parseFloat(document.getElementById('cc-selling-price').value) || 0;
+  const st = document.getElementById('cc-settlement-price').value;
+  if (!st || sp <= 0) { toast('请先选机型/填销售价'); return; }
+  const brand = document.getElementById('cc-brand').value;
+  const model = document.getElementById('cc-model').value;
+  const ram = document.getElementById('cc-ram')?.value || '';
+  const storage = document.getElementById('cc-storage')?.value || '';
+  const source = document.getElementById('cc-source').value;
+  const r = calcSettlement(sp, brand, source);
+  const lines = [];
+  if (brand && model) lines.push(brand + ' ' + model + (ram ? ' ' + ram : '') + (storage ? ' ' + storage : ''));
+  lines.push('销售价 ' + sp + ' 元');
+  lines.push('服务费 -' + (r.serviceFee || 0) + ' 元（' + r.ratePercent + '）');
+  lines.push('物流费 -' + (r.logisticsFee || 0) + ' 元');
+  lines.push('电商税 -' + (r.tax || 0) + ' 元（1%）');
+  lines.push('结算价 ' + st + ' 元');
+  copyText(lines.join('\n')).then(() => toast('已复制结算价')).catch(() => toast('复制失败'));
 }
 
 function onSettlementInput() {
