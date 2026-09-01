@@ -183,6 +183,10 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
       <div class="form-group">
         <label>结算价 <span class="hint">(自动填充/可改)</span></label>
         <input type="number" id="cc-settlement-price" placeholder="自动填充" oninput="onSettlementInput()">
+        <div id="cc-settle-breakdown" style="display:none;font-size:12px;color:#888;margin-top:4px;line-height:1.6;">
+          <span>服务费 <b id="cc-bd-fee" style="color:#fa8c16">-</b></span>
+          <span style="margin-left:12px;">固定费 <b id="cc-bd-fixed" style="color:#fa8c16">-</b></span>
+        </div>
       </div>
     </div>
     <div class="form-group">
@@ -655,15 +659,31 @@ function onSellingInput() {
 function autoFillSettlement() {
   const el = document.getElementById('cc-settlement-price');
   const sp = parseFloat(document.getElementById('cc-selling-price').value) || 0;
-  if (sp <= 0) { el.value = ''; return; }
+  if (sp <= 0) { el.value = ''; updateSettleBreakdown(); return; }
   const brand = document.getElementById('cc-brand').value;
   const source = document.getElementById('cc-source').value;
   const r = calcSettlement(sp, brand, source);
   el.value = r.settlementPrice > 0 ? r.settlementPrice : '';
+  updateSettleBreakdown();
+}
+
+function updateSettleBreakdown() {
+  // 结算价下方明细：服务费 / 固定费（用户口语称「电商税」，实际后台扣固定 7 元）
+  const wrap = document.getElementById('cc-settle-breakdown');
+  if (!wrap) return;
+  const sp = parseFloat(document.getElementById('cc-selling-price').value) || 0;
+  if (sp <= 0) { wrap.style.display = 'none'; return; }
+  const brand = document.getElementById('cc-brand').value;
+  const source = document.getElementById('cc-source').value;
+  const r = calcSettlement(sp, brand, source);
+  document.getElementById('cc-bd-fee').textContent = '-' + (r.serviceFee || 0) + '元（' + r.ratePercent + '）';
+  document.getElementById('cc-bd-fixed').textContent = '-' + (r.tax || 0) + '元';
+  wrap.style.display = 'block';
 }
 
 function onSettlementInput() {
   settlementPriceEdited = true;
+  updateSettleBreakdown();
   calc();
 }
 
