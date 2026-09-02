@@ -1295,11 +1295,16 @@ function resetData() {
 
 // ======================== Sync from Tencent Docs ========================
 async function syncFromTencent() {
+  // HTTPS 页面（pages.dev/github.io）调 HTTP 局域网服务会被浏览器「混合内容」拦截，
+  // 必须用局域网 HTTP 地址打开工具，按钮才能同步。
+  if (location.protocol === 'https:') {
+    toast('请在手机浏览器打开 http://192.168.1.29:3000（需和电脑同一 WiFi）再点同步；或等每日凌晨3点自动同步');
+    return;
+  }
   let serverUrl = localStorage.getItem('cost_calc_server_url') || '';
   if (!serverUrl) {
-    serverUrl = prompt('请输入电脑服务地址（如 http://192.168.1.29:3000）', 'http://192.168.1.29:3000');
+    serverUrl = location.origin;  // 局域网版同源
     if (!serverUrl) return;
-    serverUrl = serverUrl.trim();
   }
   serverUrl = serverUrl.replace(/\/+$/, '');
   localStorage.setItem('cost_calc_server_url', serverUrl);
